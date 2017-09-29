@@ -9,8 +9,8 @@ libname crsp "Q:\Data-ReadOnly\CRSP";
 
 /* plotting macro */
 %macro plot;
-title " plot of each variable ";
 %do i = 1 %to 4;
+title "plot the daily averages of &&var&i over time period";
 proc sgplot data = dsf_mean;
 series x = date y = &&var&i;
 run;
@@ -78,8 +78,50 @@ order by dsf.permno;
 quit;
 
 
-/* linear regression */
-proc reg;
+/* linear regression for beta */
+proc reg noprint outest = regbeta;
 model ret = sprtrn;
 by permno;
 run;
+
+/* rename the beta */
+data reg_result;
+set regbeta;
+beta = sprtrn;
+keep permno intercept beta;
+run;
+
+/* calculate the volatility */
+proc means data = dsf_merged std noprint;
+output out = dsf_merged_std std = ;
+var ret sprtrn;
+by permno;
+run;
+
+/* merge the beta with volatility */
+proc sql;
+create table dsf_merged_std_beta as
+select dsf_merged_std.permno, intercept, ret, sprtrn, beta
+from dsf_merged_std, reg_result
+where dsf_merged_std.permno = reg_result.permno
+order by dsf_merged_std.permno;
+quit;
+/* compute the iosyncratic volatility */
+data dsf_isovol;
+set dsf_merged_std_beta;
+isovol = ret - beta*sprtrn;
+keep permno intercept ret sprtrn beta isovol;
+run;
+/* sort the data basied on systematic vol */
+proc sort data = dsf_isovol out = dsf_sys_sorted;
+by sprtrn;
+run;
+
+/* quintile portfolio */
+proc rank data = dsf_isovol out = dsf_quintile groups = 5;
+var sprtrn;
+ranks rank1;
+run;
+
+
+
