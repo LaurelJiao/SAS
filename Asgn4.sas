@@ -50,36 +50,6 @@ set dsf_fyear;
 if spread > 5 then spread = .;
 run;
 
-/* storing to pdf */
-ods pdf file = "P:\SAS\asgn4\asgn4_output.pdf";
-/* descriptive data for variables */
-proc means data = dsf_fyear n mean p25 p50 p75 std min max nway;
-output out = dsf_mean mean = ;
-var &vars;
-by date;
-run;
-
-/* plotting macro */
-%macro plot0;
-%do i = 1 %to 4;
-title "plot the daily averages of &&var&i over time period";
-proc sgplot data = dsf_mean;
-series x = date y = &&var&i;
-run;
-%end;
-%mend;
-/* plot the average variable over time */
-title "plot the daily averages of the variable over sample period ";
-proc sgplot data = dsf_mean;
-series x = date y = ret /y2axis;
-series x = date y = price;
-series x = date y = spread;
-series x = date y = vol;
-run;
-/* plot each variable separately */
-%plot0;
-ods pdf close;
-
 /* merge the s&p market return sprtrn with dsf*/
 proc sql;
 create table dsf_merged as
@@ -141,28 +111,6 @@ where dsf_sys_quintile.cusip = dsf.cusip
 order by dsf_sys_quintile.rank0;
 quit;
 
-/* plotting macro */
-%macro plot1;
-%do i = 1 %to 4;
-title "plot the daily averages of &&var&i in different quintile group";
-proc sgplot data = dsf_sys_portfolio_mean;
-series x = rank0 y = &&var&i/markers;
-run;
-%end;
-%mend;
-/* storing to pdf */
-ods pdf file = "P:\SAS\asgn4\asgn4_output.pdf";
-
-/* compute the descriptive statistics for the systematic vol quintile portfolio for analysis*/
-proc means data = dsf_sys_portfolio n mean p25 p50 p75 std min max nway;
-output out = dsf_sys_portfolio_mean mean = ;
-var &vars;
-by rank0;
-run;
-
-/* plot them for analysis*/
-%plot1;
-ods pdf close;
 
 /* sort the data basied on idiosyncratic vol */
 proc sort data = dsf_isovol out = dsf_isovol_sorted;
@@ -183,8 +131,56 @@ from dsf,dsf_isovol_quintile
 where dsf_isovol_quintile.cusip = dsf.cusip
 order by dsf_isovol_quintile.rank0;
 quit;
+/**********************************************************************************************************************/
+/* storing to pdf */
+ods pdf file = "P:\SAS\asgn4\asgn4_output.pdf";
+/* descriptive data for variables */
+proc means data = dsf_fyear n mean p25 p50 p75 std min max nway;
+output out = dsf_mean mean = ;
+var &vars;
+by date;
+run;
 
 /* plotting macro */
+%macro plot0;
+%do i = 1 %to 4;
+title "plot the daily averages of &&var&i over time period";
+proc sgplot data = dsf_mean;
+series x = date y = &&var&i;
+run;
+%end;
+%mend;
+/* plot the average variable over time */
+title "plot the daily averages of the variable over sample period ";
+proc sgplot data = dsf_mean;
+series x = date y = ret /y2axis;
+series x = date y = price;
+series x = date y = spread;
+series x = date y = vol;
+run;
+/* plot each variable separately */
+%plot0;
+/* plotting macro 1 */
+%macro plot1;
+%do i = 1 %to 4;
+title "plot the daily averages of &&var&i in different quintile group";
+proc sgplot data = dsf_sys_portfolio_mean;
+series x = rank0 y = &&var&i/markers;
+run;
+%end;
+%mend;
+
+/* compute the descriptive statistics for the systematic vol quintile portfolio for analysis*/
+proc means data = dsf_sys_portfolio n mean p25 p50 p75 std min max nway;
+output out = dsf_sys_portfolio_mean mean = ;
+var &vars;
+by rank0;
+run;
+
+/* plot them for analysis*/
+%plot1;
+
+/* plotting macro 2 */
 %macro plot2;
 %do i = 1 %to 4;
 title "plot the daily averages of &&var&i in different quintile group";
@@ -203,3 +199,5 @@ run;
 
 /* plot them for analysis */
 %plot2;
+
+ods pdf close;
