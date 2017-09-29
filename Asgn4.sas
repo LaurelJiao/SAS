@@ -123,5 +123,13 @@ var sprtrn;
 ranks rank1;
 run;
 
+/* merge the quintile portfolio with original one */
+proc sql;
+create table dsf_sys_quintile as
+select *
+from dsf_quintile, dsf
+where dsf_quintile.permno = dsf.permno
+order by dsf_quintile.rank1;
+quit;
 
 
